@@ -8,10 +8,17 @@ import * as os from '@/os.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
 
-export const storagePersisted = ref(await navigator.storage.persisted());
+export const storagePersisted = ref(await (navigator.storage?.persisted?.() ?? Promise.resolve(false)).catch(() => false));
 
 export async function enableStoragePersistence() {
 	try {
+		if (!navigator.storage?.persist) {
+			os.alert({
+				type: 'error',
+				text: i18n.ts.somethingHappened,
+			});
+			return;
+		}
 		const persisted = await navigator.storage.persist();
 		if (persisted) {
 			storagePersisted.value = true;
@@ -21,7 +28,7 @@ export async function enableStoragePersistence() {
 				text: i18n.ts.somethingHappened,
 			});
 		}
-	}	catch (err) {
+	} catch (err) {
 		os.alert({
 			type: 'error',
 			text: i18n.ts.somethingHappened,

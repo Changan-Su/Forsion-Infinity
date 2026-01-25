@@ -30,6 +30,10 @@ cypress/videos
 # Coverage
 coverage
 
+# env (keep .env.example)
+/.env
+!/.env.example
+
 # config
 /.config/*
 !/.config/example.yml
