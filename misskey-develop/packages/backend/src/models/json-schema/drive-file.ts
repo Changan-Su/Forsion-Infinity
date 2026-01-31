@@ -108,5 +108,9 @@ export const packedDriveFileSchema = {
 			optional: true, nullable: true,
 			ref: 'UserLite',
 		},
+		isHtmlBundle: {
+			type: 'boolean',
+			optional: false, nullable: false,
+		},
 	},
 } as const;

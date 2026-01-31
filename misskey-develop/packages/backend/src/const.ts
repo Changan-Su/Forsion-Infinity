@@ -93,8 +93,8 @@ https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers
 export const HTML_BUNDLE_MIME_TYPE = 'application/zip';
 export const HTML_MIME_TYPE = 'text/html';
 
-// Maximum size for HTML Bundle (10MB)
-export const HTML_BUNDLE_MAX_SIZE = 10 * 1024 * 1024;
+// Maximum size for HTML Bundle (30MB)
+export const HTML_BUNDLE_MAX_SIZE = 30 * 1024 * 1024;
 
 // Maximum number of files in HTML Bundle
 export const HTML_BUNDLE_MAX_FILES = 100;

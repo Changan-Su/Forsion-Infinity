@@ -627,8 +627,13 @@ export class DriveService {
 				const extractResult = await this.htmlBundleService.extractHtmlBundle(path, bundleExtractPath);
 				htmlBundlePath = extractResult.bundlePath;
 				file.isHtmlBundle = true;
-				file.htmlBundlePath = `html-bundles/${file.id}`;
-				this.registerLogger.info(`HTML Bundle extracted: ${htmlBundlePath}`);
+				// Include subfolder path if index.html is not in root
+				if (extractResult.relativeBundlePath) {
+					file.htmlBundlePath = `html-bundles/${file.id}/${extractResult.relativeBundlePath}`;
+				} else {
+					file.htmlBundlePath = `html-bundles/${file.id}`;
+				}
+				this.registerLogger.info(`HTML Bundle extracted: ${htmlBundlePath}, stored path: ${file.htmlBundlePath}`);
 			} catch (error) {
 				this.registerLogger.error(`Failed to extract HTML Bundle: ${error}`);
 				throw error;

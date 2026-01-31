@@ -434,6 +434,7 @@ export class NoteEntityService implements OnModuleInit {
 			hasPoll: note.hasPoll || undefined,
 			uri: note.uri ?? undefined,
 			url: note.url ?? undefined,
+			iframeEmbeds: note.iframeEmbeds && note.iframeEmbeds.length > 0 ? note.iframeEmbeds : undefined,
 
 			...(opts.detail ? {
 				clippedCount: note.clippedCount,

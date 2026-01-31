@@ -218,6 +218,7 @@ export class DriveFileEntityService {
 			}) : null,
 			userId: opts.withUser ? file.userId : null,
 			user: (opts.withUser && file.userId) ? this.userEntityService.pack(file.userId) : null,
+			isHtmlBundle: file.isHtmlBundle ?? false,
 		});
 	}
 
@@ -257,6 +258,7 @@ export class DriveFileEntityService {
 			})) : null,
 			userId: file.userId,
 			user: (opts.withUser && file.userId) ? hint?.packedUser ?? this.userEntityService.pack(file.userId) : null,
+			isHtmlBundle: file.isHtmlBundle ?? false,
 		});
 	}
 

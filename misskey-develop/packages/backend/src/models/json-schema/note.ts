@@ -265,5 +265,31 @@ export const packedNoteSchema = {
 			type: 'string',
 			optional: true, nullable: true,
 		},
+		iframeEmbeds: {
+			type: 'array',
+			optional: true, nullable: false,
+			items: {
+				type: 'object',
+				optional: false, nullable: false,
+				properties: {
+					src: {
+						type: 'string',
+						optional: false, nullable: false,
+					},
+					width: {
+						type: 'string',
+						optional: true, nullable: true,
+					},
+					height: {
+						type: 'string',
+						optional: true, nullable: true,
+					},
+					title: {
+						type: 'string',
+						optional: true, nullable: true,
+					},
+				},
+			},
+		},
 	},
 } as const;

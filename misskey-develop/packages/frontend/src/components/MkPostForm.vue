@@ -89,6 +89,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkUploaderItems :items="uploader.items.value" @showMenu="(item, ev) => showPerUploadItemMenu(item, ev)" @showMenuViaContextmenu="(item, ev) => showPerUploadItemMenuViaContextmenu(item, ev)"/>
 	</div>
 	<MkPollEditor v-if="poll" v-model="poll" @destroyed="poll = null"/>
+	<div v-if="iframeEmbeds.length > 0" :class="$style.iframeEmbedsList">
+		<div v-for="(embed, index) in iframeEmbeds" :key="index" :class="$style.iframeEmbedItem">
+			<div :class="$style.iframeEmbedInfo">
+				<i class="ti ti-code"></i>
+				<span :class="$style.iframeEmbedUrl">{{ embed.src }}</span>
+			</div>
+			<button class="_button" :class="$style.iframeEmbedRemove" @click="removeIframeEmbed(index)">
+				<i class="ti ti-x"></i>
+			</button>
+		</div>
+	</div>
 	<MkNotePreview v-if="showPreview" :class="$style.preview" :text="text" :files="files" :poll="poll ?? undefined" :useCw="useCw" :cw="cw" :user="postAccount ?? $i"/>
 	<div v-if="showingOptions" style="padding: 8px 16px;">
 	</div>
@@ -96,6 +107,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.footerLeft">
 			<button v-tooltip="i18n.ts.attachFile + ' (' + i18n.ts.upload + ')'" class="_button" :class="$style.footerButton" @click="chooseFileFromPc"><i class="ti ti-photo-plus"></i></button>
 			<button v-tooltip="i18n.ts.attachFile + ' (' + i18n.ts.fromDrive + ')'" class="_button" :class="$style.footerButton" @click="chooseFileFromDrive"><i class="ti ti-cloud-download"></i></button>
+			<button v-tooltip="i18n.ts.attachHtmlBundle" class="_button" :class="$style.footerButton" @click="chooseHtmlBundle"><i class="ti ti-file-code"></i></button>
+			<button v-tooltip="i18n.ts.attachIframeEmbed" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: iframeEmbeds.length > 0 }]" @click="addIframeEmbed"><i class="ti ti-code"></i></button>
 			<button v-tooltip="i18n.ts.poll" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: poll }]" @click="togglePoll"><i class="ti ti-chart-arrows"></i></button>
 			<button v-tooltip="i18n.ts.useCw" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: useCw }]" @click="useCw = !useCw"><i class="ti ti-eye-off"></i></button>
 			<button v-tooltip="i18n.ts.hashtags" class="_button" :class="[$style.footerButton, { [$style.footerButtonActive]: withHashtags }]" @click="withHashtags = !withHashtags"><i class="ti ti-hash"></i></button>
@@ -223,6 +236,7 @@ const justEndedComposition = ref(false);
 const renoteTargetNote: ShallowRef<PostFormProps['renote'] | null> = shallowRef(props.renote);
 const replyTargetNote: ShallowRef<PostFormProps['reply'] | null> = shallowRef(props.reply);
 const targetChannel = shallowRef(props.channel);
+const iframeEmbeds = ref<{ src: string; width?: string; height?: string; title?: string }[]>([]);
 
 const serverDraftId = ref<string | null>(null);
 const postFormActions = getPluginHandlers('post_form_action');
@@ -310,7 +324,8 @@ const canPost = computed((): boolean => {
 			1 <= uploader.items.value.length ||
 			poll.value != null ||
 			renoteTargetNote.value != null ||
-			quoteId.value != null
+			quoteId.value != null ||
+			iframeEmbeds.value.length > 0
 		) &&
 		(textLength.value <= maxTextLength.value) &&
 		(
@@ -502,6 +517,43 @@ function chooseFileFromDrive(ev: PointerEvent) {
 	chooseDriveFile({ multiple: true }).then(driveFiles => {
 		files.value.push(...driveFiles);
 	});
+}
+
+function chooseHtmlBundle(ev: PointerEvent) {
+	if (props.mock) return;
+
+	os.chooseFileFromPc({ 
+		multiple: false,
+		accept: 'application/zip,.zip'
+	}).then(selectedFiles => {
+		if (selectedFiles.length === 0) return;
+		
+		// Show confirmation dialog with instructions
+		os.confirm({
+			type: 'info',
+			title: i18n.ts.attachHtmlBundle,
+			text: i18n.ts.htmlBundleDescription,
+		}).then(({ canceled }) => {
+			if (!canceled) {
+				uploader.addFiles(selectedFiles);
+			}
+		});
+	});
+}
+
+function addIframeEmbed(ev: PointerEvent) {
+	if (props.mock) return;
+
+	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkIframeEmbedDialog.vue')), {}, {
+		done: (result: { src: string; width?: string; height?: string; title?: string }) => {
+			iframeEmbeds.value.push(result);
+		},
+		closed: () => dispose(),
+	});
+}
+
+function removeIframeEmbed(index: number) {
+	iframeEmbeds.value.splice(index, 1);
 }
 
 function detachFile(id: Misskey.entities.DriveFile['id']) {
@@ -715,6 +767,7 @@ function clear() {
 	poll.value = null;
 	quoteId.value = null;
 	scheduledAt.value = null;
+	iframeEmbeds.value = [];
 }
 
 function onKeydown(ev: KeyboardEvent) {
@@ -1026,6 +1079,7 @@ async function post(ev?: PointerEvent) {
 		visibility: visibility.value,
 		visibleUserIds: visibility.value === 'specified' ? visibleUsers.value.map(u => u.id) : undefined,
 		reactionAcceptance: reactionAcceptance.value,
+		iframeEmbeds: iframeEmbeds.value.length > 0 ? iframeEmbeds.value : undefined,
 	};
 
 	if (withHashtags.value && hashtags.value && hashtags.value.trim() !== '') {
@@ -1642,6 +1696,46 @@ html[data-color-scheme=dark] .preview {
 
 html[data-color-scheme=light] .preview {
 	background-image: repeating-linear-gradient(135deg, transparent, transparent 5px, #00000005 5px, #00000005 10px);
+}
+
+.iframeEmbedsList {
+	padding: 8px 16px;
+}
+
+.iframeEmbedItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 12px;
+	margin-bottom: 4px;
+	background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
+	border-radius: 8px;
+}
+
+.iframeEmbedInfo {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	overflow: hidden;
+	color: var(--MI_THEME-accent);
+}
+
+.iframeEmbedUrl {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.9em;
+	opacity: 0.8;
+}
+
+.iframeEmbedRemove {
+	padding: 4px 8px;
+	color: #ff2a2a;
+
+	&:hover {
+		background: rgba(255, 42, 42, 0.1);
+		border-radius: 4px;
+	}
 }
 
 .targetNote {

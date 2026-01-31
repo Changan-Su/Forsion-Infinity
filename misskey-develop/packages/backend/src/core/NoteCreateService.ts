@@ -123,6 +123,13 @@ type MinimumUser = {
 	uri: MiUser['uri'];
 };
 
+type IframeEmbed = {
+	src: string;
+	width?: number | string;
+	height?: number | string;
+	title?: string;
+};
+
 type Option = {
 	createdAt?: Date | null;
 	name?: string | null;
@@ -143,6 +150,7 @@ type Option = {
 	uri?: string | null;
 	url?: string | null;
 	app?: MiApp | null;
+	iframeEmbeds?: IframeEmbed[] | null;
 };
 
 @Injectable()
@@ -386,6 +394,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			apMentions: data.apMentions,
 			apHashtags: data.apHashtags,
 			apEmojis: data.apEmojis,
+			iframeEmbeds: data.iframeEmbeds,
 		});
 	}
 
@@ -598,6 +607,9 @@ export class NoteCreateService implements OnApplicationShutdown {
 				: [],
 
 			attachedFileTypes: data.files ? data.files.map(file => file.type) : [],
+
+			// Iframe embeds
+			iframeEmbeds: data.iframeEmbeds ?? [],
 
 			// 以下非正規化データ
 			replyUserId: data.reply ? data.reply.userId : null,

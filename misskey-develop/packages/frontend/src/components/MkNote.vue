@@ -99,6 +99,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 						:emojiUrls="appearNote.emojis"
 						:class="$style.poll"
 					/>
+					<div v-if="appearNote.iframeEmbeds && appearNote.iframeEmbeds.length > 0" :class="$style.iframeEmbeds">
+						<MkNoteIframeEmbed v-for="(embed, index) in appearNote.iframeEmbeds" :key="index" :embed="embed"/>
+					</div>
 					<div v-if="isEnabledUrlPreview">
 						<MkUrlPreview v-for="url in urls" :key="url" :url="url" :compact="true" :detail="false" :class="$style.urlPreview"/>
 					</div>
@@ -214,6 +217,7 @@ import MkReactionsViewerDetails from '@/components/MkReactionsViewer.details.vue
 import MkMediaList from '@/components/MkMediaList.vue';
 import MkCwButton from '@/components/MkCwButton.vue';
 import MkPoll from '@/components/MkPoll.vue';
+import MkNoteIframeEmbed from '@/components/MkNoteIframeEmbed.vue';
 import MkUsersTooltip from '@/components/MkUsersTooltip.vue';
 import MkUrlPreview from '@/components/MkUrlPreview.vue';
 import MkInstanceTicker from '@/components/MkInstanceTicker.vue';
@@ -991,6 +995,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .poll {
 	font-size: 80%;
+}
+
+.iframeEmbeds {
+	margin-top: 8px;
 }
 
 .quote {

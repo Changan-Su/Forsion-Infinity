@@ -200,6 +200,21 @@ export class MiNote {
 	})
 	public hasPoll: boolean;
 
+	/**
+	 * Iframe embeds attached to this note
+	 * Array of objects with { src, width?, height?, title? }
+	 */
+	@Column('jsonb', {
+		default: [],
+		comment: 'Iframe embeds for this note',
+	})
+	public iframeEmbeds: {
+		src: string;
+		width?: number | string;
+		height?: number | string;
+		title?: string;
+	}[];
+
 	@Index()
 	@Column({
 		...id(),

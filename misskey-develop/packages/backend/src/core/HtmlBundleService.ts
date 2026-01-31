@@ -18,6 +18,8 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 type ExtractResult = {
 	bundlePath: string;
 	indexHtmlPath: string;
+	/** Relative path from extract root to the folder containing index.html (empty string if in root) */
+	relativeBundlePath: string;
 };
 
 @Injectable()
@@ -52,9 +54,10 @@ export class HtmlBundleService {
 
 		let fileCount = 0;
 		let totalSize = 0;
-		let hasIndexHtml = false;
+		let indexHtmlPath: string | null = null;
+		const filePaths: string[] = [];
 
-		// First pass: validate entries
+		// First pass: validate entries and find index.html
 		for (const entry of entries) {
 			// Skip directories
 			if (entry.isDirectory) {
@@ -81,11 +84,9 @@ export class HtmlBundleService {
 				throw new IdentifiableError('a1b2c3d4-5e6f-7g8h-9i0j-1k2l3m4n5o6p', `Forbidden file type in HTML Bundle: ${entry.entryName}`);
 			}
 
-			// Check for index.html in root
+			// Normalize the path
 			const normalizedName = entry.entryName.replace(/^\.\//, '').replace(/\\/g, '/');
-			if (normalizedName === 'index.html' || normalizedName === '/index.html') {
-				hasIndexHtml = true;
-			}
+			filePaths.push(normalizedName);
 
 			// Prevent directory traversal attacks
 			if (entry.entryName.includes('..') || entry.entryName.startsWith('/')) {
@@ -93,27 +94,70 @@ export class HtmlBundleService {
 			}
 		}
 
+		// Find index.html - check root first, then check for common parent folder
+		const rootIndexHtml = filePaths.find(p => p === 'index.html');
+		if (rootIndexHtml) {
+			indexHtmlPath = 'index.html';
+		} else {
+			// Check if all files share a common parent folder with index.html inside
+			const parentFolders = new Set<string>();
+			for (const filePath of filePaths) {
+				const parts = filePath.split('/');
+				if (parts.length > 1) {
+					parentFolders.add(parts[0]);
+				}
+			}
+
+			// If there's exactly one parent folder, look for index.html inside it
+			if (parentFolders.size === 1) {
+				const parentFolder = [...parentFolders][0];
+				const indexInSubfolder = filePaths.find(p => p === `${parentFolder}/index.html`);
+				if (indexInSubfolder) {
+					indexHtmlPath = indexInSubfolder;
+					this.logger.info(`Found index.html in subfolder: ${indexHtmlPath}`);
+				}
+			}
+
+			// Also check for any index.html file in the archive
+			if (!indexHtmlPath) {
+				const anyIndexHtml = filePaths.find(p => p.endsWith('/index.html') || p === 'index.html');
+				if (anyIndexHtml) {
+					indexHtmlPath = anyIndexHtml;
+					this.logger.info(`Found index.html at: ${indexHtmlPath}`);
+				}
+			}
+		}
+
 		// Check if index.html exists
-		if (!hasIndexHtml) {
-			throw new IdentifiableError('c3d4e5f6-7g8h-9i0j-1k2l-3m4n5o6p7q8r', 'HTML Bundle must contain index.html in root directory');
+		if (!indexHtmlPath) {
+			throw new IdentifiableError('c3d4e5f6-7g8h-9i0j-1k2l-3m4n5o6p7q8r', 'HTML Bundle must contain index.html');
 		}
 
 		// Extract files
 		zip.extractAllTo(extractTo, true);
 
-		// Find index.html path
-		const indexHtmlPath = path.join(extractTo, 'index.html');
+		// Build the full path to index.html
+		const fullIndexHtmlPath = path.join(extractTo, indexHtmlPath);
 		
 		// Verify index.html exists after extraction
 		try {
-			await fs.access(indexHtmlPath);
+			await fs.access(fullIndexHtmlPath);
 		} catch {
-			throw new IdentifiableError('d4e5f6g7-8h9i-0j1k-2l3m-4n5o6p7q8r9s', 'index.html not found after extraction');
+			throw new IdentifiableError('d4e5f6g7-8h9i-0j1k-2l3m-4n5o6p7q8r9s', `index.html not found after extraction at ${fullIndexHtmlPath}`);
 		}
 
+		// Determine the bundle path (the folder containing index.html)
+		const bundlePath = path.dirname(fullIndexHtmlPath);
+		
+		// Calculate relative path from extract root to bundle folder
+		const relativeBundlePath = path.dirname(indexHtmlPath);
+
+		this.logger.info(`HTML Bundle extracted successfully. Bundle path: ${bundlePath}, index.html: ${fullIndexHtmlPath}, relative: ${relativeBundlePath}`);
+
 		return {
-			bundlePath: extractTo,
-			indexHtmlPath,
+			bundlePath,
+			indexHtmlPath: fullIndexHtmlPath,
+			relativeBundlePath: relativeBundlePath === '.' ? '' : relativeBundlePath,
 		};
 	}
 

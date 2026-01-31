@@ -1125,6 +1125,62 @@ export interface Locale extends ILocale {
      */
     "attachFile": string;
     /**
+     * HTML Bundle（ZIP）を添付
+     */
+    "attachHtmlBundle": string;
+    /**
+     * HTML、CSS、JavaScriptを含むZIPファイルをアップロードします。ZIPファイルはルートディレクトリに 'index.html' を含む必要があります。投稿内でインタラクティブなコンポーネントとして表示されます。
+     */
+    "htmlBundleDescription": string;
+    /**
+     * iframeを埋め込む
+     */
+    "attachIframeEmbed": string;
+    /**
+     * 外部コンテンツを埋め込むためにiframeコードを貼り付けます
+     */
+    "iframeEmbedDescription": string;
+    /**
+     * iframeコード
+     */
+    "iframeCode": string;
+    /**
+     * iframe URL
+     */
+    "iframeSrc": string;
+    /**
+     * 幅
+     */
+    "iframeWidth": string;
+    /**
+     * 高さ
+     */
+    "iframeHeight": string;
+    /**
+     * タイトル（オプション）
+     */
+    "iframeTitle": string;
+    /**
+     * iframeコードを解析できませんでした。フォーマットを確認してください
+     */
+    "iframeParseError": string;
+    /**
+     * 無効なURL
+     */
+    "iframeInvalidUrl": string;
+    /**
+     * プレビュー
+     */
+    "iframePreview": string;
+    /**
+     * iframe埋め込みを追加しました
+     */
+    "iframeEmbedAdded": string;
+    /**
+     * iframe埋め込みを削除
+     */
+    "removeIframeEmbed": string;
+    /**
      * もっと！
      */
     "more": string;

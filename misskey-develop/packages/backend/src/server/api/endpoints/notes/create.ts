@@ -182,6 +182,20 @@ export const paramDef = {
 			},
 			required: ['choices'],
 		},
+		iframeEmbeds: {
+			type: 'array',
+			maxItems: 4,
+			items: {
+				type: 'object',
+				properties: {
+					src: { type: 'string', minLength: 1, maxLength: 2048 },
+					width: { type: 'string', maxLength: 20 },
+					height: { type: 'string', maxLength: 20 },
+					title: { type: 'string', maxLength: 256 },
+				},
+				required: ['src'],
+			},
+		},
 	},
 	// (re)note with text, files and poll are optional
 	if: {
@@ -241,6 +255,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					apMentions: ps.noExtractMentions ? [] : undefined,
 					apHashtags: ps.noExtractHashtags ? [] : undefined,
 					apEmojis: ps.noExtractEmojis ? [] : undefined,
+					iframeEmbeds: ps.iframeEmbeds ?? [],
 				});
 
 				return {
