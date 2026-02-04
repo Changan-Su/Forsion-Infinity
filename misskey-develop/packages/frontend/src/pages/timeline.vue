@@ -10,29 +10,40 @@ SPDX-License-Identifier: AGPL-3.0-only
 			{{ i18n.ts._timelineDescription[src] }}
 		</MkTip>
 		<MkPostForm v-if="prefer.r.showFixedPostForm.value" :class="$style.postForm" class="_panel" fixed style="margin-bottom: var(--MI-margin);"/>
-		<MkStreamingNotesTimeline
-			ref="tlComponent"
-			:key="src + withRenotes + withReplies + onlyFiles + withSensitive"
-			:class="$style.tl"
-			:src="(src.split(':')[0] as (BasicTimelineType | 'list'))"
-			:list="src.split(':')[1]"
-			:withRenotes="withRenotes"
-			:withReplies="withReplies"
-			:withSensitive="withSensitive"
-			:onlyFiles="onlyFiles"
-			:sound="true"
-		/>
+		
+		<template v-if="viewMode === 'list'">
+			<MkStreamingNotesTimeline
+				ref="tlComponent"
+				:key="src + withRenotes + withReplies + onlyFiles + withSensitive"
+				:class="$style.tl"
+				:src="(src.split(':')[0] as (BasicTimelineType | 'list'))"
+				:list="src.split(':')[1]"
+				:withRenotes="withRenotes"
+				:withReplies="withReplies"
+				:withSensitive="withSensitive"
+				:onlyFiles="onlyFiles"
+				:sound="true"
+			/>
+		</template>
+		<template v-else>
+			<MkNotesCardTimeline
+				:key="src + withRenotes + withReplies + onlyFiles + withSensitive + viewMode"
+				:paginator="timelinePaginator"
+				:mode="viewMode"
+			/>
+		</template>
 	</div>
 </PageWithHeader>
 </template>
 
 <script lang="ts" setup>
-import { computed, watch, provide, useTemplateRef, ref, onMounted, onActivated } from 'vue';
+import { computed, watch, provide, useTemplateRef, ref, onMounted, onActivated, markRaw } from 'vue';
 import type { Tab } from '@/components/global/MkPageHeader.tabs.vue';
 import type { MenuItem } from '@/types/menu.js';
 import type { BasicTimelineType } from '@/timelines.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import MkStreamingNotesTimeline from '@/components/MkStreamingNotesTimeline.vue';
+import MkNotesCardTimeline from '@/components/MkNotesCardTimeline.vue';
 import MkPostForm from '@/components/MkPostForm.vue';
 import * as os from '@/os.js';
 import { store } from '@/store.js';
@@ -45,6 +56,7 @@ import { deepMerge } from '@/utility/merge.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { availableBasicTimelines, hasWithReplies, isAvailableBasicTimeline, isBasicTimeline, basicTimelineIconClass } from '@/timelines.js';
 import { prefer } from '@/preferences.js';
+import { Paginator } from '@/utility/paginator.js';
 
 const tlComponent = useTemplateRef('tlComponent');
 
@@ -105,6 +117,64 @@ const withSensitive = computed<boolean>({
 });
 
 const showFixedPostForm = prefer.model('showFixedPostForm');
+
+// 视图模式：list（列表）、masonry（瀑布流）、compact（紧凑）
+function getInitialViewMode(): 'list' | 'masonry' | 'compact' {
+	const saved = localStorage.getItem('timeline_view_mode');
+	return (saved === 'masonry' || saved === 'compact') ? saved : 'list';
+}
+
+const viewMode = ref<'list' | 'masonry' | 'compact'>(getInitialViewMode());
+
+// 保存视图模式偏好
+watch(viewMode, (newMode) => {
+	localStorage.setItem('timeline_view_mode', newMode);
+});
+
+// 为卡片视图创建 Paginator
+const timelinePaginator = computed(() => {
+	const timelineSrc = src.value.split(':')[0] as BasicTimelineType | 'list';
+	const listId = src.value.split(':')[1];
+	
+	// 构建时间线端点和参数
+	let endpoint: string;
+	const params: Record<string, any> = {};
+	
+	if (timelineSrc === 'list' && listId) {
+		endpoint = 'notes/user-list-timeline';
+		params.listId = listId;
+		if (withRenotes.value) params.withRenotes = true;
+		if (onlyFiles.value) params.withFiles = true;
+	} else if (timelineSrc === 'home') {
+		endpoint = 'notes/timeline';
+		if (withRenotes.value) params.withRenotes = true;
+		if (onlyFiles.value) params.withFiles = true;
+	} else if (timelineSrc === 'local') {
+		endpoint = 'notes/local-timeline';
+		if (withRenotes.value) params.withRenotes = true;
+		if (withReplies.value) params.withReplies = true;
+		if (onlyFiles.value) params.withFiles = true;
+	} else if (timelineSrc === 'social') {
+		endpoint = 'notes/hybrid-timeline';
+		if (withRenotes.value) params.withRenotes = true;
+		if (withReplies.value) params.withReplies = true;
+		if (onlyFiles.value) params.withFiles = true;
+	} else if (timelineSrc === 'global') {
+		endpoint = 'notes/global-timeline';
+		if (withRenotes.value) params.withRenotes = true;
+		if (onlyFiles.value) params.withFiles = true;
+	} else {
+		// 默认使用 home timeline
+		endpoint = 'notes/timeline';
+		if (withRenotes.value) params.withRenotes = true;
+		if (onlyFiles.value) params.withFiles = true;
+	}
+	
+	return markRaw(new Paginator(endpoint, {
+		limit: 10,
+		params,
+	}));
+});
 
 async function chooseList(ev: PointerEvent): Promise<void> {
 	const lists = await userListsCache.fetch();
@@ -205,51 +275,82 @@ onActivated(() => {
 });
 
 const headerActions = computed<PageHeaderItem[]>(() => {
-	const items: PageHeaderItem[] = [{
-		icon: 'ti ti-dots',
-		text: i18n.ts.options,
-		handler: (ev) => {
-			const menuItems: MenuItem[] = [];
+	const items: PageHeaderItem[] = [
+		{
+			icon: viewMode.value === 'list' ? 'ti ti-list' : viewMode.value === 'masonry' ? 'ti ti-layout-grid' : 'ti ti-layout-columns',
+			text: viewMode.value === 'list' ? '列表' : viewMode.value === 'masonry' ? '瀑布流' : '紧凑',
+			handler: (ev) => {
+				const menuItems: MenuItem[] = [
+					{
+						type: 'button',
+						text: '列表',
+						icon: 'ti ti-list',
+						active: viewMode.value === 'list',
+						action: () => { viewMode.value = 'list'; },
+					},
+					{
+						type: 'button',
+						text: '瀑布流',
+						icon: 'ti ti-layout-grid',
+						active: viewMode.value === 'masonry',
+						action: () => { viewMode.value = 'masonry'; },
+					},
+					{
+						type: 'button',
+						text: '紧凑',
+						icon: 'ti ti-layout-columns',
+						active: viewMode.value === 'compact',
+						action: () => { viewMode.value = 'compact'; },
+					},
+				];
+				os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
+			},
+		},
+		{
+			icon: 'ti ti-dots',
+			text: i18n.ts.options,
+			handler: (ev) => {
+				const menuItems: MenuItem[] = [];
 
-			menuItems.push({
-				type: 'switch',
-				icon: 'ti ti-repeat',
-				text: i18n.ts.showRenotes,
-				ref: withRenotes,
-			});
-
-			if (isBasicTimeline(src.value) && hasWithReplies(src.value)) {
 				menuItems.push({
 					type: 'switch',
-					icon: 'ti ti-messages',
-					text: i18n.ts.showRepliesToOthersInTimeline,
-					ref: withReplies,
-					disabled: onlyFiles,
+					icon: 'ti ti-repeat',
+					text: i18n.ts.showRenotes,
+					ref: withRenotes,
 				});
-			}
 
-			menuItems.push({
-				type: 'switch',
-				icon: 'ti ti-eye-exclamation',
-				text: i18n.ts.withSensitive,
-				ref: withSensitive,
-			}, {
-				type: 'switch',
-				icon: 'ti ti-photo',
-				text: i18n.ts.fileAttachedOnly,
-				ref: onlyFiles,
-				disabled: isBasicTimeline(src.value) && hasWithReplies(src.value) ? withReplies : false,
-			}, {
-				type: 'divider',
-			}, {
-				type: 'switch',
-				text: i18n.ts.showFixedPostForm,
-				ref: showFixedPostForm,
-			});
+				if (isBasicTimeline(src.value) && hasWithReplies(src.value)) {
+					menuItems.push({
+						type: 'switch',
+						icon: 'ti ti-messages',
+						text: i18n.ts.showRepliesToOthersInTimeline,
+						ref: withReplies,
+						disabled: onlyFiles,
+					});
+				}
 
-			os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
-		},
-	}];
+				menuItems.push({
+					type: 'switch',
+					icon: 'ti ti-eye-exclamation',
+					text: i18n.ts.withSensitive,
+					ref: withSensitive,
+				}, {
+					type: 'switch',
+					icon: 'ti ti-photo',
+					text: i18n.ts.fileAttachedOnly,
+					ref: onlyFiles,
+					disabled: isBasicTimeline(src.value) && hasWithReplies(src.value) ? withReplies : false,
+				}, {
+					type: 'divider',
+				}, {
+					type: 'switch',
+					text: i18n.ts.showFixedPostForm,
+					ref: showFixedPostForm,
+				});
+
+				os.popupMenu(menuItems, ev.currentTarget ?? ev.target);
+			},
+		}];
 
 	if (deviceKind === 'desktop') {
 		items.unshift({
