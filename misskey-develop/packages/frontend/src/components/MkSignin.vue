@@ -5,6 +5,26 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.signinRoot">
+	<!-- Forsion Login (shown when Forsion is enabled) -->
+	<div v-if="showForsionLogin" :class="$style.forsionLoginContainer">
+		<button 
+			:class="$style.forsionLoginButton"
+			@click="onForsionLogin"
+		>
+			<i class="ti ti-login"></i>
+			{{ i18n.ts._forsion?.loginWithForsion || 'Login with Forsion' }}
+		</button>
+		<p :class="$style.forsionHint">
+			{{ i18n.ts._forsion?.useUnifiedAccount || 'Use your unified Forsion account to login' }}
+		</p>
+		
+		<!-- Divider when both options are available -->
+		<div :class="$style.divider">
+			<span>{{ i18n.ts.or || '或者' }}</span>
+		</div>
+	</div>
+
+	<!-- Native Misskey Login (always shown) -->
 	<Transition
 		mode="out-in"
 		:enterActiveClass="$style.transition_enterActive"
@@ -65,7 +85,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, shallowRef, useTemplateRef } from 'vue';
+import { nextTick, onBeforeUnmount, ref, shallowRef, useTemplateRef, computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import { supported as webAuthnSupported, parseRequestOptionsFromJSON } from '@github/webauthn-json/browser-ponyfill';
 import type { AuthenticationPublicKeyCredential } from '@github/webauthn-json/browser-ponyfill';
@@ -75,6 +95,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { showSuspendedDialog } from '@/utility/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
+import { redirectToForsionLogin, isForsionEnabled } from '@/utils/forsionAuth.js';
 
 import XInput from '@/components/MkSignin.input.vue';
 import XPassword from '@/components/MkSignin.password.vue';
@@ -106,6 +127,15 @@ const needCaptcha = ref(false);
 
 const userInfo = ref<null | Misskey.entities.UserDetailed>(null);
 const password = ref('');
+
+// Check if Forsion login should be shown
+const showForsionLogin = computed(() => isForsionEnabled());
+
+//#region Forsion Login
+function onForsionLogin(): void {
+	redirectToForsionLogin('misskey');
+}
+//#endregion
 
 //#region Passkey Passwordless
 const credentialRequest = shallowRef<CredentialRequestOptions | null>(null);
@@ -421,5 +451,73 @@ onBeforeUnmount(() => {
 	justify-content: center;
 	align-items: center;
 	z-index: 1;
+}
+
+.forsionLoginContainer {
+	margin-bottom: 1.5rem;
+}
+
+.forsionLoginButton {
+	width: 100%;
+	padding: 0.75rem 1rem;
+	font-size: 1rem;
+	font-weight: 600;
+	color: #fff;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	border: none;
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: transform 0.2s, box-shadow 0.2s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+}
+
+.forsionLoginButton:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.forsionLoginButton:active {
+	transform: translateY(0);
+}
+
+.forsionLoginButton i {
+	font-size: 1.2rem;
+}
+
+.forsionHint {
+	margin-top: 1rem;
+	text-align: center;
+	color: var(--MI_THEME-fg);
+	opacity: 0.7;
+	font-size: 0.875rem;
+}
+
+.divider {
+	position: relative;
+	text-align: center;
+	margin: 20px 0;
+	
+	&::before {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background: var(--MI_THEME-divider);
+	}
+	
+	span {
+		position: relative;
+		display: inline-block;
+		padding: 0 12px;
+		background: var(--MI_THEME-panel);
+		color: var(--MI_THEME-fg);
+		opacity: 0.6;
+		font-size: 0.9em;
+	}
 }
 </style>

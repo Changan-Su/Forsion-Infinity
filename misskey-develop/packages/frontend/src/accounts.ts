@@ -16,6 +16,7 @@ import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
 import { $i } from '@/i.js';
 import { signout } from '@/signout.js';
+import { initForsionAuth, getForsionToken, forsionLogout } from '@/utils/forsionAuth.js';
 
 type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
 
@@ -61,14 +62,21 @@ const isAccountDeleted = Symbol('isAccountDeleted');
 
 function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Promise<Misskey.entities.MeDetailed> {
 	return new Promise((done, fail) => {
+		// Check if it's a Forsion JWT token
+		const forsionToken = getForsionToken();
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		};
+
+		// Use Authorization header for Forsion JWT, or body 'i' field for native token
+		if (forsionToken && token === forsionToken) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+
 		window.fetch(`${apiUrl}/i`, {
 			method: 'POST',
-			body: JSON.stringify({
-				i: token,
-			}),
-			headers: {
-				'Content-Type': 'application/json',
-			},
+			body: forsionToken && token === forsionToken ? JSON.stringify({}) : JSON.stringify({ i: token }),
+			headers,
 		})
 			.then(res => new Promise<Misskey.entities.MeDetailed | { error: Record<string, any> }>((done2, fail2) => {
 				if (res.status >= 500 && res.status < 600) {

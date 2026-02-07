@@ -115,6 +115,12 @@ type Source = {
 			enableQueryParamLogging?: boolean,
 		}
 	}
+
+	// Forsion integration
+	forsion?: {
+		enabled?: boolean;
+		apiUrl?: string;
+	};
 };
 
 export type Config = {
@@ -176,6 +182,12 @@ export type Config = {
 			enableQueryParamLogging?: boolean,
 		}
 	}
+
+	// Forsion integration
+	forsion?: {
+		enabled?: boolean;
+		apiUrl?: string;
+	};
 
 	version: string;
 	publishTarballInsteadOfProvideRepositoryUrl: boolean;
@@ -346,6 +358,10 @@ export function loadConfig(): Config {
 		deactivateAntennaThreshold: config.deactivateAntennaThreshold ?? (1000 * 60 * 60 * 24 * 7),
 		pidFile: config.pidFile,
 		logging: config.logging,
+		forsion: config.forsion ? {
+			enabled: config.forsion.enabled ?? false,
+			apiUrl: config.forsion.apiUrl ?? '',
+		} : undefined,
 	};
 }
 

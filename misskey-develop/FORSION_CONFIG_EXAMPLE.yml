@@ -1,0 +1,224 @@
+# Forsion Backend 集成 - 完整配置示例
+# 
+# 此文件展示了如何在 Misskey 中完整配置 Forsion Backend 集成
+# 包含后端和前端的所有必要配置
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 1. 后端配置 (.config/default.yml)
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 在 .config/default.yml 文件末尾添加：
+
+forsion:
+  enabled: true
+  apiUrl: 'http://localhost:3001'
+
+# 开发环境完整示例：
+# forsion:
+#   enabled: true
+#   apiUrl: 'http://localhost:3001'
+
+# 生产环境完整示例：
+# forsion:
+#   enabled: true
+#   apiUrl: 'https://api.forsion.com'
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 2. 前端配置 (packages/frontend/.env)
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 复制 packages/frontend/.env.example 为 .env，然后修改：
+
+# 开发环境：
+VITE_FORSION_AUTH_URL=http://localhost:3001/auth
+VITE_FORSION_API_URL=http://localhost:3001
+
+# 生产环境：
+# VITE_FORSION_AUTH_URL=https://api.forsion.com/auth
+# VITE_FORSION_API_URL=https://api.forsion.com
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 3. Forsion Backend 配置 (Forsion Backend .env)
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 在 Forsion Backend 的 .env 文件中需要配置：
+
+# JWT_SECRET（用于签名和验证 JWT，Misskey 不需要此密钥）
+JWT_SECRET=your-super-secret-jwt-key-keep-secure
+
+# JWT 过期时间（默认7天）
+JWT_EXPIRES_IN=7d
+
+# CORS 允许的源（必须包含 Misskey 的 URL）
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://your-misskey.com
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 4. 配置检查清单
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ✅ Misskey Backend (.config/default.yml)
+#    [ ] forsion.enabled = true
+#    [ ] forsion.apiUrl 指向 Forsion Backend
+
+# ✅ Misskey Frontend (packages/frontend/.env)
+#    [ ] VITE_FORSION_AUTH_URL 已设置
+#    [ ] VITE_FORSION_API_URL 已设置
+#    [ ] URL 不包含尾部斜杠
+
+# ✅ Forsion Backend (.env)
+#    [ ] JWT_SECRET 已设置（用于签名 JWT）
+#    [ ] ALLOWED_ORIGINS 包含 Misskey 的 URL
+#    [ ] Forsion Backend 服务正在运行
+
+# ✅ 数据库
+#    [ ] 已运行数据库迁移: pnpm migrate
+#    [ ] forsion_user_mapping 表已创建
+
+# ✅ 网络连接
+#    [ ] Misskey Backend 可以访问 Forsion Backend API
+#    [ ] 检查防火墙规则
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 5. 启动步骤
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 步骤1: 配置 Forsion Backend
+cd /path/to/forsion-backend
+# 编辑 .env，设置 JWT_SECRET 和 ALLOWED_ORIGINS
+npm run dev  # 启动 Forsion Backend（端口 3001）
+
+# 步骤2: 配置 Misskey Backend
+cd /path/to/misskey-develop
+# 编辑 .config/default.yml，添加 forsion 配置
+pnpm compile-config  # 编译配置
+pnpm migrate         # 运行数据库迁移
+pnpm build           # 构建后端
+pnpm start           # 启动 Misskey Backend（端口 3000）
+
+# 步骤3: 配置 Misskey Frontend
+cd /path/to/misskey-develop/packages/frontend
+# 复制 .env.example 为 .env
+# 编辑 .env，设置 VITE_FORSION_AUTH_URL 和 VITE_FORSION_API_URL
+cd /path/to/misskey-develop
+pnpm dev             # 启动开发服务器（端口 5173）
+
+# 步骤4: 测试
+# 打开浏览器访问 http://localhost:5173
+# 应该能看到 "Login with Forsion" 按钮
+# 点击后跳转到 http://localhost:3001/auth
+# 登录后重定向回 Misskey
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 6. 常见配置场景
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 场景1: 本地开发（所有服务在 localhost）
+# ------------------------------------------------
+# Misskey Backend (.config/default.yml):
+#   forsion:
+#     enabled: true
+#     apiUrl: 'http://localhost:3001'
+#
+# Misskey Frontend (.env):
+#   VITE_FORSION_AUTH_URL=http://localhost:3001/auth
+#   VITE_FORSION_API_URL=http://localhost:3001
+#
+# Forsion Backend (.env):
+#   JWT_SECRET=dev-local-secret-123456789012345678901234567890
+#   ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# 场景2: 生产环境（所有服务使用域名）
+# ------------------------------------------------
+# Misskey Backend (.config/default.yml):
+#   forsion:
+#     enabled: true
+#     apiUrl: 'https://api.forsion.com'
+#
+# Misskey Frontend (.env):
+#   VITE_FORSION_AUTH_URL=https://api.forsion.com/auth
+#   VITE_FORSION_API_URL=https://api.forsion.com
+#
+# Forsion Backend (.env):
+#   JWT_SECRET=prod-strong-random-secret-DO-NOT-SHARE
+#   ALLOWED_ORIGINS=https://misskey.example.com
+
+# 场景3: 混合环境（Forsion 生产，Misskey 本地测试）
+# ------------------------------------------------
+# Misskey Backend (.config/default.yml):
+#   forsion:
+#     enabled: true
+#     apiUrl: 'https://api.forsion.com'
+#
+# Misskey Frontend (.env):
+#   VITE_FORSION_AUTH_URL=https://api.forsion.com/auth
+#   VITE_FORSION_API_URL=https://api.forsion.com
+#
+# Forsion Backend (.env):
+#   JWT_SECRET=prod-secret-from-forsion
+#   ALLOWED_ORIGINS=http://localhost:5173,https://api.forsion.com
+
+# 场景4: 禁用 Forsion（回退到 Misskey 原生登录）
+# ------------------------------------------------
+# Misskey Backend (.config/default.yml):
+#   forsion:
+#     enabled: false
+#
+# 注意：禁用后 "Login with Forsion" 按钮将不显示
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 7. 安全建议
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ⚠️  JWT_SECRET 安全（仅 Forsion Backend）
+#     - 使用强随机字符串（至少32字符）
+#     - 开发和生产使用不同的密钥
+#     - 不要提交到 Git 仓库
+#     - 不要共享给前端或其他服务
+#     - 定期轮换密钥（需要让所有用户重新登录）
+
+# ⚠️  Token 验证机制
+#     - Misskey Backend 通过调用 Forsion Backend API 验证 token
+#     - 无需在 Misskey Backend 配置 JWT_SECRET
+#     - 确保 Misskey Backend 和 Forsion Backend 之间网络畅通
+
+# ⚠️  HTTPS 要求
+#     - 生产环境必须使用 HTTPS
+#     - JWT token 包含敏感用户信息
+#     - 使用 HTTP 会导致 token 被窃取
+
+# ⚠️  CORS 配置
+#     - 只允许信任的域名
+#     - 不要使用通配符 * 
+#     - 检查拼写错误（http vs https）
+
+# ⚠️  环境变量
+#     - 使用 .env 文件（不提交到 Git）
+#     - 生产环境使用环境变量或密钥管理服务
+#     - 定期审计配置文件
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 8. 更多资源
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 📖 详细文档
+#    - ./FORSION_INTEGRATION.md - 完整集成指南
+#    - ./FORSION_INTEGRATION_TESTS.md - 测试计划
+#    - ./Document/Log/2026-02-04-Forsion-Backend登录系统集成实施.md - 实施记录
+
+# 🔧 Skill 文档
+#    - .cursor/skills/forsion-login-integration/SKILL.md
+#    - .cursor/skills/forsion-login-integration/api-reference.md
+
+# 💡 Token 验证流程说明
+#    1. 前端从 Forsion Backend 登录获取 JWT token
+#    2. 前端保存 token 到 localStorage
+#    3. 前端发送请求时在 Authorization header 中携带 token
+#    4. Misskey Backend 收到 token，调用 Forsion Backend 的 /api/auth/me 验证
+#    5. Forsion Backend 验证 token 并返回用户信息
+#    6. Misskey Backend 根据用户信息创建/获取 Misskey 用户
+
+# 🔍 验证配置
+#    - 检查 Forsion Backend 日志
+#    - 检查 Misskey Backend 日志
+#    - 使用浏览器开发者工具查看网络请求
+#    - 查看 localStorage 中的 forsion_jwt_token

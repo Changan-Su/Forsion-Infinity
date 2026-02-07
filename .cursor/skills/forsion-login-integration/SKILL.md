@@ -16,6 +16,27 @@ Use this skill when:
 - Configuring API clients with authentication headers
 - Troubleshooting authentication issues
 
+## Important: JWT Token vs JWT Secret
+
+**Frontend applications ONLY need JWT tokens, NOT the JWT_SECRET:**
+
+| Concept | Who Uses | What Is It |
+|---------|----------|------------|
+| **JWT Token** | Frontend / All API clients | A string returned by `/api/auth/login` that must be sent in the `Authorization: Bearer <token>` header for all authenticated API calls |
+| **JWT Secret (JWT_SECRET)** | Backend server only | A secret key stored in backend `.env` used to sign and verify tokens. **NEVER share with or configure in frontend** |
+
+**Frontend Integration Summary:**
+1. Call login API → Receive `token` string in response
+2. Save token to localStorage
+3. Send token in `Authorization: Bearer <token>` header for ALL authenticated API requests
+4. Frontend does NOT need, and should NOT have access to, JWT_SECRET
+
+**Which APIs need the token?**
+- **Login/Register APIs**: No token needed (you call these to GET a token)
+- **All other APIs**: Token required (user info, credits, payments, storage, AI chat, etc.)
+
+If you are asked to configure "JWT_SECRET" in frontend, that is incorrect. Frontend only uses the token string.
+
 ## Quick Start Integration (3 Steps)
 
 ### Step 1: Create Auth Utility
@@ -168,6 +189,8 @@ VITE_AUTH_URL=http://localhost:3001/auth
 ```
 
 ## API Integration
+
+**IMPORTANT**: All API calls (except login/register) require the JWT token in the Authorization header. The frontend uses the **token string** (not JWT_SECRET) returned from login.
 
 ### Setting Up API Client with Axios
 
@@ -355,10 +378,11 @@ const { token, user } = await response.json();
 **Symptoms:** API returns 401 even with token present
 
 **Solutions:**
-1. Check token is being sent in header: `Authorization: Bearer <token>`
+1. Check token is being sent in header: `Authorization: Bearer <token>` (use the token string from login response, NOT JWT_SECRET)
 2. Verify token hasn't expired (default: 7 days)
 3. Check token format (no extra spaces or quotes)
 4. Verify API base URL is correct
+5. Ensure you're using the token (e.g., `eyJhbGciOiJIUzI1NiIs...`), not the JWT_SECRET from backend
 
 ### Issue: Token Not Saved After Login
 
@@ -508,7 +532,10 @@ When calling auth functions, use these standard app identifiers:
 1. **Error Handling**: Always wrap auth calls in try-catch
 2. **Loading States**: Show loading UI during validation
 3. **Offline Support**: Allow graceful degradation when API unavailable
-4. **Security**: Never log tokens in production
+4. **Security**: 
+   - Never log tokens in production
+   - Never store JWT_SECRET in frontend (it belongs only on backend)
+   - Only use the token string from login response
 5. **Token Refresh**: Implement token refresh if using long sessions
 6. **Testing**: Test login flow in incognito/private mode
 
@@ -527,11 +554,13 @@ For integration to work, backend admin must:
    - `/api/auth/register` (registration API)
    - `/api/auth/me` (user info API)
 
-3. **Ensure JWT configuration** is set:
+3. **Backend JWT configuration** (backend only, not shared with frontend):
    ```env
-   JWT_SECRET=your-secret-key
+   JWT_SECRET=your-secret-key-kept-on-backend-only
    JWT_EXPIRES_IN=7d
    ```
+   
+   **Note**: `JWT_SECRET` stays on the backend server. Frontend never receives or configures this secret.
 
 ## Additional Resources
 

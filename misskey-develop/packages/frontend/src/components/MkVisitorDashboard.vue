@@ -24,8 +24,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkInfo v-else-if="instance.federation === 'none'" warn>{{ i18n.ts.federationDisabled }}</MkInfo>
 			</div>
 			<div class="_gaps_s" :class="$style.mainActions">
-				<MkButton :class="$style.mainAction" full rounded gradate data-cy-signup style="margin-right: 12px;" @click="signup()">{{ i18n.ts.joinThisServer }}</MkButton>
-				<MkButton :class="$style.mainAction" full rounded link to="https://misskey-hub.net/servers/">{{ i18n.ts.exploreOtherServers }}</MkButton>
+				<!-- Forsion Login Button (always visible) -->
+				<MkButton :class="$style.mainAction" full rounded gradate data-cy-forsion-login @click="loginWithForsion()">
+					<i class="ti ti-login"></i> 使用 Forsion 账号登录
+				</MkButton>
+				
+				<!-- Divider -->
+				<div :class="$style.divider">
+					<span>{{ i18n.ts.or || '或者' }}</span>
+				</div>
+				
+				<!-- Native Misskey Signup/Signin -->
+				<MkButton :class="$style.mainAction" full rounded data-cy-signup @click="signup()">{{ i18n.ts.joinThisServer }}</MkButton>
 				<MkButton :class="$style.mainAction" full rounded data-cy-signin @click="signin()">{{ i18n.ts.login }}</MkButton>
 			</div>
 		</div>
@@ -56,7 +66,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { instanceName } from '@@/js/config.js';
-import type { MenuItem } from '@/types/menu.js';
 import XSigninDialog from '@/components/MkSigninDialog.vue';
 import XSignupDialog from '@/components/MkSignupDialog.vue';
 import MkButton from '@/components/MkButton.vue';
@@ -69,6 +78,7 @@ import { instance } from '@/instance.js';
 import MkNumber from '@/components/MkNumber.vue';
 import XActiveUsersChart from '@/components/MkVisitorDashboard.ActiveUsersChart.vue';
 import { openInstanceMenu } from '@/ui/_common_/common.js';
+import { redirectToForsionLogin } from '@/utils/forsionAuth.js';
 
 const stats = ref<Misskey.entities.StatsResponse | null>(null);
 
@@ -76,6 +86,10 @@ if (instance.clientOptions.showActivitiesForVisitor !== false) {
 	misskeyApi('stats', {}).then((res) => {
 		stats.value = res;
 	});
+}
+
+function loginWithForsion() {
+	redirectToForsionLogin('misskey');
 }
 
 function signin() {
@@ -169,6 +183,32 @@ function showMenu(ev: PointerEvent) {
 
 .mainAction {
 	line-height: 28px;
+}
+
+.divider {
+	position: relative;
+	text-align: center;
+	margin: 16px 0;
+	
+	&::before {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background: var(--MI_THEME-divider);
+	}
+	
+	span {
+		position: relative;
+		display: inline-block;
+		padding: 0 12px;
+		background: var(--MI_THEME-panel);
+		color: var(--MI_THEME-fg);
+		opacity: 0.6;
+		font-size: 0.9em;
+	}
 }
 
 .stats {

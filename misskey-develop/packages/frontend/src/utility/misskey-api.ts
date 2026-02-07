@@ -7,6 +7,7 @@ import * as Misskey from 'misskey-js';
 import { ref } from 'vue';
 import { apiUrl } from '@@/js/config.js';
 import { $i } from '@/i.js';
+import { getForsionToken } from '@/utils/forsionAuth.js';
 export const pendingApiRequestsCount = ref(0);
 
 // Implements Misskey.api.ApiClient.request
@@ -29,9 +30,20 @@ export function misskeyApi<
 	};
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Append a credential
-		if ($i) data.i = $i.token;
-		if (token !== undefined) data.i = token;
+		// Determine authentication method
+		const forsionToken = getForsionToken();
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		};
+
+		// Prefer Forsion JWT token if available
+		if (forsionToken) {
+			headers['Authorization'] = `Bearer ${forsionToken}`;
+		} else {
+			// Fallback to Misskey native token (in body)
+			if ($i) data.i = $i.token;
+			if (token !== undefined) data.i = token;
+		}
 
 		// Send request
 		window.fetch(`${apiUrl}/${endpoint}`, {
@@ -39,9 +51,7 @@ export function misskeyApi<
 			body: JSON.stringify(data),
 			credentials: 'omit',
 			cache: 'no-cache',
-			headers: {
-				'Content-Type': 'application/json',
-			},
+			headers,
 			signal,
 		}).then(async (res) => {
 			const body = res.status === 204 ? null : await res.json();

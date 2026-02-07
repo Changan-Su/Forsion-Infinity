@@ -3,7 +3,7 @@ import pluginReplace from '@rollup/plugin-replace';
 import pluginVue from '@vitejs/plugin-vue';
 import pluginGlsl from 'vite-plugin-glsl';
 import type { UserConfig } from 'vite';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import * as yaml from 'js-yaml';
 import { promises as fsp } from 'fs';
 
@@ -91,6 +91,9 @@ export function getConfig(): UserConfig {
 	return {
 		base: '/vite/',
 
+		// Load .env from current directory (packages/frontend)
+		envDir: '.',
+
 		// The console is shared with backend, so clearing the console will also clear the backend log.
 		clearScreen: false,
 
@@ -169,6 +172,9 @@ export function getConfig(): UserConfig {
 			_PERF_PREFIX_: JSON.stringify('Misskey:'),
 			__VUE_OPTIONS_API__: false,
 			__VUE_PROD_DEVTOOLS__: false,
+			// Forsion Backend Integration
+			_FORSION_AUTH_URL_: JSON.stringify(process.env.VITE_FORSION_AUTH_URL || ''),
+			_FORSION_API_URL_: JSON.stringify(process.env.VITE_FORSION_API_URL || ''),
 		},
 
 		build: {
@@ -240,6 +246,14 @@ export function getConfig(): UserConfig {
 	};
 }
 
-const config = defineConfig(({ command, mode }) => getConfig());
+const config = defineConfig(({ command, mode }) => {
+	// Load env file from current directory
+	const env = loadEnv(mode, '.', 'VITE_');
+	
+	// Merge into process.env so getConfig() can access them
+	Object.assign(process.env, env);
+	
+	return getConfig();
+});
 
 export default config;

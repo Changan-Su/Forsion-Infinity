@@ -13,6 +13,8 @@ import type { MiApp } from '@/models/App.js';
 import { CacheService } from '@/core/CacheService.js';
 import { isNativeUserToken } from '@/misc/token.js';
 import { bindThis } from '@/decorators.js';
+import { ForsionAuthService, ForsionAuthError } from './ForsionAuthService.js';
+import { ForsionUserProvisionService } from './ForsionUserProvisionService.js';
 
 export class AuthenticationError extends Error {
 	constructor(message: string) {
@@ -36,6 +38,8 @@ export class AuthenticateService implements OnApplicationShutdown {
 		private appsRepository: AppsRepository,
 
 		private cacheService: CacheService,
+		private forsionAuthService: ForsionAuthService,
+		private forsionUserProvisionService: ForsionUserProvisionService,
 	) {
 		this.appCache = new MemoryKVCache<MiApp>(1000 * 60 * 60 * 24 * 7); // 1w
 	}
@@ -46,6 +50,26 @@ export class AuthenticateService implements OnApplicationShutdown {
 			return [null, null];
 		}
 
+		// Check if this is a Forsion JWT token
+		if (this.forsionAuthService.isForsionToken(token)) {
+			try {
+				// Verify JWT token by calling Forsion Backend API
+				const forsionUserInfo = await this.forsionAuthService.verifyToken(token);
+				
+				// Get or create Misskey user from Forsion user info
+				const user = await this.forsionUserProvisionService.getOrCreateUser(forsionUserInfo);
+				
+				// Return user without access token (JWT is used directly)
+				return [user, null];
+			} catch (error) {
+				if (error instanceof ForsionAuthError) {
+					throw new AuthenticationError(error.message);
+				}
+				throw error;
+			}
+		}
+
+		// Original Misskey authentication logic
 		if (isNativeUserToken(token)) {
 			const user = await this.cacheService.localUserByNativeTokenCache.fetch(token,
 				() => this.usersRepository.findOneBy({ token }) as Promise<MiLocalUser | null>);
