@@ -184,6 +184,7 @@ import { store } from '@/store.js';
 import MkInfo from '@/components/MkInfo.vue';
 import MkTextarea from '@/components/MkTextarea.vue';
 import { genId } from '@/utility/id.js';
+import { updateCurrentAccountPartial } from '@/accounts.js';
 
 const $i = ensureSignin();
 
@@ -232,7 +233,7 @@ function deleteField(itemId: string) {
 function saveFields() {
 	os.apiWithDialog('i/update', {
 		fields: fields.value.filter(field => field.name !== '' && field.value !== '').map(field => ({ name: field.name, value: field.value })),
-	});
+	}).then(updateCurrentAccountPartial);
 }
 
 function save() {
@@ -257,7 +258,7 @@ function save() {
 			title: i18n.ts.yourNameContainsProhibitedWords,
 			text: i18n.ts.yourNameContainsProhibitedWordsDescription,
 		},
-	});
+	}).then(updateCurrentAccountPartial);
 	claimAchievement('profileFilled');
 	if (profile.name === 'syuilo' || profile.name === 'しゅいろ') {
 		claimAchievement('setNameToSyuilo');
@@ -272,8 +273,7 @@ function changeAvatar(ev: PointerEvent) {
 		const i = await os.apiWithDialog('i/update', {
 			avatarId: driveFile.id,
 		});
-		$i.avatarId = i.avatarId;
-		$i.avatarUrl = i.avatarUrl;
+		updateCurrentAccountPartial(i);
 		claimAchievement('profileFilled');
 	}
 
@@ -321,8 +321,7 @@ function changeBanner(ev: PointerEvent) {
 		const i = await os.apiWithDialog('i/update', {
 			bannerId: driveFile.id,
 		});
-		$i.bannerId = i.bannerId;
-		$i.bannerUrl = i.bannerUrl;
+		updateCurrentAccountPartial(i);
 	}
 
 	os.popupMenu([{

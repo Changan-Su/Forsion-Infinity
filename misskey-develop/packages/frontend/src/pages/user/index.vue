@@ -67,6 +67,11 @@ function fetchUser(): void {
 
 	const { username, host } = Misskey.acct.parse(props.acct);
 
+	if ($i && $i.username === username && ($i.host ?? null) === (host ?? null)) {
+		user.value = $i;
+		return;
+	}
+
 	if (CTX_USER && CTX_USER.username === username && CTX_USER.host === host) {
 		user.value = CTX_USER;
 		return;
